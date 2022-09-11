@@ -8,7 +8,7 @@ import java.util.List;
 public class SystemItemImportRequest {
     private List<SystemItemImport> items;
 
-    private Date updateDate;
+    private String updateDate;
 
     public SystemItemImportRequest() {
     }
@@ -21,11 +21,11 @@ public class SystemItemImportRequest {
         this.items = items;
     }
 
-    public Date getUpdateDate() {
+    public String getUpdateDate() {
         return updateDate;
     }
 
-    public void setUpdateDate(Date updateDate) {
+    public void setUpdateDate(String updateDate) {
         this.updateDate = updateDate;
     }
 }

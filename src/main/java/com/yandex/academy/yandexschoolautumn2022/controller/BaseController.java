@@ -1,5 +1,6 @@
 package com.yandex.academy.yandexschoolautumn2022.controller;
 
+import com.fasterxml.jackson.databind.util.JSONPObject;
 import com.yandex.academy.yandexschoolautumn2022.model.Error;
 import com.yandex.academy.yandexschoolautumn2022.model.SystemItemImportRequest;
 import com.yandex.academy.yandexschoolautumn2022.service.BaseService;
@@ -16,20 +17,19 @@ import java.time.format.DateTimeFormatter;
 import java.util.Date;
 
 @RestController
-@RequestMapping("/base")
+@RequestMapping
 public class BaseController {
     @Autowired
     private BaseService baseService;
 
     @PostMapping("/imports")
     public ResponseEntity imports(@RequestBody SystemItemImportRequest request) {
-        var result = new Error();
-        result.setCode(200);
-        result.setMessage("Ok");
+        Error result = baseService.imports(request.getItems(), request.getUpdateDate());
 
+        if(result.getCode() == 200)
+            return new ResponseEntity<>(HttpStatus.OK);
 
-        baseService.imports(request.getItems(), request.getUpdateDate());
-        return ResponseEntity.ok(result);
+        return new ResponseEntity<>(result, HttpStatus.BAD_REQUEST);
     }
 
     @DeleteMapping("/delete/{id}")

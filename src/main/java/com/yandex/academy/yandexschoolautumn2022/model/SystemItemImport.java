@@ -2,14 +2,21 @@ package com.yandex.academy.yandexschoolautumn2022.model;
 
 import com.yandex.academy.yandexschoolautumn2022.entity.SystemItemDB;
 
+import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.TemporalAccessor;
 import java.util.Date;
 import java.util.List;
 
 public class SystemItemImport {
-    public static SystemItemDB ToSystemItemDB(SystemItemImport item, Date date){
+    public static SystemItemDB ToSystemItemDB(SystemItemImport item, String date){
         SystemItemDB model = new SystemItemDB();
+        TemporalAccessor ta = DateTimeFormatter.ISO_INSTANT.parse(date);
+        Instant i = Instant.from(ta);
+
         model.setId(item.getId());
-        model.setDate(date);
+        model.setDate(Date.from(i));
         model.setSize(item.getSize());
         model.setType(item.getType());
         model.setParentId(item.getParentId());
