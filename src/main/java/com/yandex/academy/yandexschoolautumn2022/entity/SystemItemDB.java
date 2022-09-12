@@ -11,7 +11,13 @@ import java.util.Date;
 @Entity(name = "yandex_files")
 public class SystemItemDB {
     public static SystemNodesResponse toSystemNodesResponse(SystemItemDB itemDB, ArrayList<SystemNodesResponse> children) {
-        SystemNodesResponse result = (SystemNodesResponse) itemDB;
+        SystemNodesResponse result = new SystemNodesResponse();
+        result.setParentId(itemDB.getParentId());
+        result.setSize(itemDB.getSize());
+        result.setDate(itemDB.getDate());
+        result.setId(itemDB.getId());
+        result.setUrl(itemDB.getUrl());
+        result.setType(itemDB.getType());
         result.setChildren(children);
 
         return result;

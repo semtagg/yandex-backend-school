@@ -150,7 +150,7 @@ public class BaseService {
         for (SystemItemDB item : itemsDB) {
             SystemNodesResponse response = SystemItemDB.toSystemNodesResponse(item, null);
             if (item.getType() == SystemItemType.FOLDER) {
-                Tuple2<Long, ArrayList<SystemNodesResponse>> tuple = getChildren(item.getParentId());
+                Tuple2<Long, ArrayList<SystemNodesResponse>> tuple = getChildren(item.getId());
                 size += tuple.getFirst();
 
                 response.setSize(tuple.getFirst());
