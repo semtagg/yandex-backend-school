@@ -1,12 +1,22 @@
 package com.yandex.academy.yandexschoolautumn2022.entity;
 
+import com.yandex.academy.yandexschoolautumn2022.model.SystemItem;
 import com.yandex.academy.yandexschoolautumn2022.model.SystemItemType;
+import com.yandex.academy.yandexschoolautumn2022.model.SystemNodesResponse;
 
 import javax.persistence.*;
+import java.util.ArrayList;
 import java.util.Date;
 
 @Entity(name = "yandex_files")
 public class SystemItemDB {
+    public static SystemNodesResponse toSystemNodesResponse(SystemItemDB itemDB, ArrayList<SystemNodesResponse> children) {
+        SystemNodesResponse result = (SystemNodesResponse) itemDB;
+        result.setChildren(children);
+
+        return result;
+    }
+
     @Id
     @Column(nullable = false, unique = true)
     private String id;
@@ -23,7 +33,7 @@ public class SystemItemDB {
 
     private Long size;
 
-    public SystemItemDB(){
+    public SystemItemDB() {
     }
 
     public String getId() {

@@ -2,6 +2,7 @@ package com.yandex.academy.yandexschoolautumn2022.controller;
 
 import com.fasterxml.jackson.databind.util.JSONPObject;
 import com.yandex.academy.yandexschoolautumn2022.model.Error;
+import com.yandex.academy.yandexschoolautumn2022.model.ErrorResponse;
 import com.yandex.academy.yandexschoolautumn2022.model.SystemItemImportRequest;
 import com.yandex.academy.yandexschoolautumn2022.service.BaseService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,31 +27,37 @@ public class BaseController {
     public ResponseEntity imports(@RequestBody SystemItemImportRequest request) {
         Error result = baseService.imports(request.getItems(), request.getUpdateDate());
 
-        if(result.getCode() == 200)
-            return new ResponseEntity<>(HttpStatus.OK);
+        if (result.getCode() == 400) {
+            return new ResponseEntity<>(result, HttpStatus.BAD_REQUEST);
+        }
 
-        return new ResponseEntity<>(result, HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 
     @DeleteMapping("/delete/{id}")
     public ResponseEntity delete(@PathVariable String id, @RequestParam String date) {
-        Date date1 = Date.from(Instant.parse(date));
-        baseService.delete(id, date1);
+        Error result = baseService.delete(id, date);
 
-        var result = new Error();
-        result.setCode(200);
-        result.setMessage("Ok");
-        return ResponseEntity.ok(result);
+        if (result.getCode() == 400) {
+            return new ResponseEntity<>(result, HttpStatus.BAD_REQUEST);
+        }
+
+        if (result.getCode() == 404) {
+            return new ResponseEntity<>(result, HttpStatus.NOT_FOUND);
+        }
+
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 
 
     @GetMapping("/nodes/{id}")
     public ResponseEntity nodes(@PathVariable String id) {
-        baseService.nodes(id);
+        ErrorResponse result = baseService.nodes(id);
 
-        var result = new Error();
-        result.setCode(200);
-        result.setMessage("Ok");
-        return ResponseEntity.ok(result);
+        if (result.getCode() == 404) {
+            return new ResponseEntity<>(result, HttpStatus.NOT_FOUND);
+        }
+
+        return new ResponseEntity<>(result, HttpStatus.OK);
     }
 }

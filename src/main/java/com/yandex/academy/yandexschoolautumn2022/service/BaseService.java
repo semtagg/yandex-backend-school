@@ -1,10 +1,10 @@
 package com.yandex.academy.yandexschoolautumn2022.service;
 
 import com.yandex.academy.yandexschoolautumn2022.entity.SystemItemDB;
+import com.yandex.academy.yandexschoolautumn2022.model.*;
 import com.yandex.academy.yandexschoolautumn2022.model.Error;
-import com.yandex.academy.yandexschoolautumn2022.model.SystemItemImport;
-import com.yandex.academy.yandexschoolautumn2022.model.SystemItemType;
 import com.yandex.academy.yandexschoolautumn2022.repository.CustomRepository;
+import com.yandex.academy.yandexschoolautumn2022.utils.Tuple2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -37,7 +37,7 @@ public class BaseService {
     }
 
     public Error imports(List<SystemItemImport> items, String date) {
-        var result = new Error();
+        Error result = new Error();
 
         if (!isIsoDate(date)) {
             result.setCode(400);
@@ -55,7 +55,7 @@ public class BaseService {
         for (SystemItemImport item : items) {
             if (item.getId() == null
                     || (item.getType() == SystemItemType.FOLDER && item.getUrl() != null)
-                    || (item.getType() == SystemItemType.FILE && item.getUrl().length() > 255)
+                    || (item.getType() == SystemItemType.FILE && !(item.getUrl().length() <= 255))
                     || (item.getType() == SystemItemType.FOLDER && item.getSize() != null)
                     || (item.getType() == SystemItemType.FILE && (item.getSize() == null || item.getSize() <= 0))
             ) {
@@ -110,36 +110,78 @@ public class BaseService {
         ArrayList<SystemItemDB> items = repository.getAllByParentId(id);
 
         for (SystemItemDB item : items) {
-            deleteSubfolder(item.getId());
+            if (item.getType() == SystemItemType.FOLDER)
+                deleteSubfolder(item.getId());
+
             repository.delete(item);
         }
     }
 
-    public void delete(String id, Date date) {
-        SystemItemDB item = repository.findById(id).get();
+    public Error delete(String id, String date) {
+        Error result = new Error();
 
-        deleteSubfolder(item.getId());
-        if (item.getType() == SystemItemType.FOLDER) {
-            deleteSubfolder(item.getId());
+        if (!isIsoDate(date)) {
+            result.setCode(400);
+            result.setMessage("Validation Failed");
+            return result;
         }
-        repository.delete(item);
+
+        Optional<SystemItemDB> item = repository.findById(id);
+        if (item.isEmpty()) {
+            result.setCode(404);
+            result.setMessage("Item not found");
+            return result;
+        }
+
+        if (item.get().getType() == SystemItemType.FOLDER) {
+            deleteSubfolder(item.get().getId());
+        }
+        repository.delete(item.get());
+
+        result.setCode(200);
+        return result;
     }
 
-    private void getChildren(String id, ArrayList<SystemItemDB> items) {
+    private Tuple2<Long, ArrayList<SystemNodesResponse>> getChildren(String id) {
+        ArrayList<SystemNodesResponse> children = new ArrayList<>();
         ArrayList<SystemItemDB> itemsDB = repository.getAllByParentId(id);
-        if (itemsDB != null) items.addAll(itemsDB);
+        Long size = 0L;
 
         for (SystemItemDB item : itemsDB) {
-            getChildren(item.getId(), items);
+            SystemNodesResponse response = SystemItemDB.toSystemNodesResponse(item, null);
+            if (item.getType() == SystemItemType.FOLDER) {
+                Tuple2<Long, ArrayList<SystemNodesResponse>> tuple = getChildren(item.getParentId());
+                size += tuple.getFirst();
+
+                response.setSize(tuple.getFirst());
+                response.setChildren(tuple.getSecond());
+            }
+
+            children.add(response);
         }
+
+        return new Tuple2<>(size, children);
     }
 
-    public ArrayList<SystemItemDB> nodes(String id) {
-        SystemItemDB item = repository.findById(id).get();
-        ArrayList<SystemItemDB> items = new ArrayList<>();
-        items.add(item);
-        getChildren(item.getId(), items);
+    public ErrorResponse nodes(String id) {
+        ErrorResponse result = new ErrorResponse();
 
-        return items;
+        Optional<SystemItemDB> item = repository.findById(id);
+        if (item.isEmpty()) {
+            result.setCode(404);
+            result.setMessage("Item not found");
+            return result;
+        }
+
+        SystemNodesResponse response = SystemItemDB.toSystemNodesResponse(item.get(), null);
+        if (item.get().getType() == SystemItemType.FOLDER) {
+            Tuple2<Long, ArrayList<SystemNodesResponse>> tuple = getChildren(item.get().getId());
+            response.setChildren(tuple.getSecond());
+            response.setSize(tuple.getFirst());
+        }
+
+        result.setCode(200);
+        result.setResponse(response);
+        return result;
     }
 }
