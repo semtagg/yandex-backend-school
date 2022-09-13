@@ -5,7 +5,7 @@ services:
     image: yandex-school-backend
     build: ./
     ports:
-      - "8080:8080"
+      - "8080:80"
     environment:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgresqldb:5432/yandex
       - SPRING_DATASOURCE_USERNAME=postgres

@@ -58,6 +58,6 @@ public class BaseController {
             return new ResponseEntity<>(result, HttpStatus.NOT_FOUND);
         }
 
-        return new ResponseEntity<>(result, HttpStatus.OK);
+        return new ResponseEntity<>(result.getResponse(), HttpStatus.OK);
     }
 }

@@ -13,6 +13,7 @@ import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.time.temporal.TemporalAccessor;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -32,8 +33,20 @@ public class BaseService {
         }
     }
 
-    private void update(SystemItemDB newModel, SystemItemDB oldModel) {
+    private void update(String id, String date) {
+        Optional<SystemItemDB> parent = repository.findById(id);
+        if (parent.isPresent()) {
+            TemporalAccessor ta = DateTimeFormatter.ISO_INSTANT.parse(date);
+            Instant i = Instant.from(ta);
+            //if (Date.from(i) >= parent.get().getDate())
+            Integer flag = Date.from(i).compareTo(parent.get().getDate());
+            if (flag >= 0)
+                parent.get().setDate(Date.from(i));
 
+            if (parent.get().getParentId() != null) {
+                update(parent.get().getParentId(), date);
+            }
+        }
     }
 
     public Error imports(List<SystemItemImport> items, String date) {
@@ -72,14 +85,14 @@ public class BaseService {
                         .filter(i -> i.getId().equals(item.getParentId()))
                         .findAny();
 
-                if (parent.isPresent()) {
+                if (parent.isPresent() && parent.get().getType() == SystemItemType.FILE) {
                     result.setCode(400);
                     result.setMessage("Validation Failed");
                     return result;
                 } else {
                     Optional<SystemItemDB> parentDB = repository.findById(item.getParentId());
 
-                    if (parentDB.isPresent()) {
+                    if (parentDB.isPresent() && parentDB.get().getType() == SystemItemType.FILE) {
                         result.setCode(400);
                         result.setMessage("Validation Failed");
                         return result;
@@ -99,6 +112,9 @@ public class BaseService {
 
         for (SystemItemImport item : items) {
             SystemItemDB model = SystemItemImport.ToSystemItemDB(item, date);
+            if (item.getParentId() != null) {
+                update(item.getParentId(), date);
+            }
             repository.save(model);
         }
 
@@ -155,6 +171,8 @@ public class BaseService {
 
                 response.setSize(tuple.getFirst());
                 response.setChildren(tuple.getSecond());
+            } else {
+                size += item.getSize();
             }
 
             children.add(response);
