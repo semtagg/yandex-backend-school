@@ -5,33 +5,20 @@ import com.yandex.academy.yandexschoolautumn2022.model.*;
 import com.yandex.academy.yandexschoolautumn2022.model.Error;
 import com.yandex.academy.yandexschoolautumn2022.repository.CustomRepository;
 import com.yandex.academy.yandexschoolautumn2022.utils.Tuple2;
+import com.yandex.academy.yandexschoolautumn2022.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.time.temporal.TemporalAccessor;
 import java.util.*;
 import java.util.stream.Collectors;
-
-import static com.fasterxml.jackson.databind.type.LogicalType.DateTime;
 
 @Service
 public class BaseService {
     @Autowired
     private CustomRepository repository;
-
-    private boolean isIsoDate(String date) {
-        try {
-            DateTimeFormatter.ISO_DATE_TIME.parse(date);
-            return true;
-        } catch (DateTimeParseException e) {
-            return false;
-        }
-    }
 
     private void update(String id, String date) {
         Optional<SystemItemDB> parent = repository.findById(id);
@@ -52,7 +39,7 @@ public class BaseService {
     public Error imports(List<SystemItemImport> items, String date) {
         Error result = new Error();
 
-        if (!isIsoDate(date)) {
+        if (!Utils.isIsoDate(date)) {
             result.setCode(400);
             result.setMessage("Validation Failed");
             return result;
@@ -136,7 +123,7 @@ public class BaseService {
     public Error delete(String id, String date) {
         Error result = new Error();
 
-        if (!isIsoDate(date)) {
+        if (!Utils.isIsoDate(date)) {
             result.setCode(400);
             result.setMessage("Validation Failed");
             return result;
@@ -181,8 +168,8 @@ public class BaseService {
         return new Tuple2<>(size, children);
     }
 
-    public ErrorResponse nodes(String id) {
-        ErrorResponse result = new ErrorResponse();
+    public ErrorNodesResponse nodes(String id) {
+        ErrorNodesResponse result = new ErrorNodesResponse();
 
         Optional<SystemItemDB> item = repository.findById(id);
         if (item.isEmpty()) {

@@ -1,7 +1,7 @@
 com\yandex\academy\yandexschoolautumn2022\model\SystemItem.class
 com\yandex\academy\yandexschoolautumn2022\model\SystemItemImportRequest.class
 com\yandex\academy\yandexschoolautumn2022\model\Error.class
-com\yandex\academy\yandexschoolautumn2022\model\ErrorResponse.class
+com\yandex\academy\yandexschoolautumn2022\utils\Utils.class
 com\yandex\academy\yandexschoolautumn2022\model\SystemItemHistoryResponse.class
 com\yandex\academy\yandexschoolautumn2022\model\SystemItemImport.class
 com\yandex\academy\yandexschoolautumn2022\model\SystemNodesResponse.class
@@ -14,4 +14,5 @@ com\yandex\academy\yandexschoolautumn2022\service\AdditionalService.class
 com\yandex\academy\yandexschoolautumn2022\service\BaseService.class
 com\yandex\academy\yandexschoolautumn2022\utils\Tuple2.class
 com\yandex\academy\yandexschoolautumn2022\YandexSchoolAutumn2022Application.class
+com\yandex\academy\yandexschoolautumn2022\model\ErrorNodesResponse.class
 com\yandex\academy\yandexschoolautumn2022\model\SystemItemType.class

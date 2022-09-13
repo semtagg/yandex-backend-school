@@ -1,21 +1,13 @@
 package com.yandex.academy.yandexschoolautumn2022.controller;
 
-import com.fasterxml.jackson.databind.util.JSONPObject;
 import com.yandex.academy.yandexschoolautumn2022.model.Error;
-import com.yandex.academy.yandexschoolautumn2022.model.ErrorResponse;
+import com.yandex.academy.yandexschoolautumn2022.model.ErrorNodesResponse;
 import com.yandex.academy.yandexschoolautumn2022.model.SystemItemImportRequest;
 import com.yandex.academy.yandexschoolautumn2022.service.BaseService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.cassandra.CassandraProperties;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.text.DateFormat;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.util.Date;
 
 @RestController
 @RequestMapping
@@ -52,7 +44,7 @@ public class BaseController {
 
     @GetMapping("/nodes/{id}")
     public ResponseEntity nodes(@PathVariable String id) {
-        ErrorResponse result = baseService.nodes(id);
+        ErrorNodesResponse result = baseService.nodes(id);
 
         if (result.getCode() == 404) {
             return new ResponseEntity<>(result, HttpStatus.NOT_FOUND);
