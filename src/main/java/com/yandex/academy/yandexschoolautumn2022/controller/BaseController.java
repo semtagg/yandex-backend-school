@@ -42,7 +42,7 @@ public class BaseController {
 
     @GetMapping("/nodes/{id}")
     public ResponseEntity nodes(@PathVariable String id) {
-        ErrorResponse<SystemNodesResponse> result = baseService.nodes(id);
+        ErrorResponse<SystemItemNodesResponse> result = baseService.nodes(id);
 
         if (result.getCode() == 400) {
             return new ResponseEntity<>((Error) result, HttpStatus.BAD_REQUEST);
@@ -57,10 +57,25 @@ public class BaseController {
 
     @GetMapping("/updates")
     public ResponseEntity updates(@RequestParam String date) {
-        ErrorResponse<SystemUpdatesResponse> result = baseService.updates(date);
+        ErrorResponse<SystemItemUpdatesResponse> result = baseService.updates(date);
 
         if (result.getCode() == 400) {
             return new ResponseEntity<>((Error) result, HttpStatus.BAD_REQUEST);
+        }
+
+        return new ResponseEntity<>(result.getResponse(), HttpStatus.OK);
+    }
+
+    @GetMapping("/node/{id}/history")
+    public ResponseEntity history(@PathVariable String id, @RequestParam String dateStart, @RequestParam String dateEnd) {
+        ErrorResponse<SystemItemUpdatesResponse> result = baseService.history(id, dateStart, dateEnd);
+
+        if (result.getCode() == 400) {
+            return new ResponseEntity<>((Error) result, HttpStatus.BAD_REQUEST);
+        }
+
+        if (result.getCode() == 404){
+            return new ResponseEntity<>((Error) result, HttpStatus.NOT_FOUND);
         }
 
         return new ResponseEntity<>(result.getResponse(), HttpStatus.OK);
