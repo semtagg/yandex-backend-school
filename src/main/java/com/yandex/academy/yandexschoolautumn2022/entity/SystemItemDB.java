@@ -3,12 +3,14 @@ package com.yandex.academy.yandexschoolautumn2022.entity;
 import com.yandex.academy.yandexschoolautumn2022.model.SystemItem;
 import com.yandex.academy.yandexschoolautumn2022.model.SystemItemType;
 import com.yandex.academy.yandexschoolautumn2022.model.SystemNodesResponse;
+import org.hibernate.envers.Audited;
+import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 
 import javax.persistence.*;
 import java.util.ArrayList;
-import java.util.Date;
 
-@Entity(name = "yandex_files")
+@Entity
+@Audited
 public class SystemItemDB {
     public static SystemNodesResponse toSystemNodesResponse(SystemItemDB itemDB, ArrayList<SystemNodesResponse> children) {
         SystemNodesResponse result = new SystemNodesResponse();
@@ -29,8 +31,8 @@ public class SystemItemDB {
 
     private String url;
 
-    @Temporal(TemporalType.TIMESTAMP)
-    private Date date;
+    @Column(nullable = false)
+    private String date;
 
     private String parentId;
 
@@ -58,11 +60,11 @@ public class SystemItemDB {
         this.url = url;
     }
 
-    public Date getDate() {
+    public String getDate() {
         return date;
     }
 
-    public void setDate(Date date) {
+    public void setDate(String date) {
         this.date = date;
     }
 

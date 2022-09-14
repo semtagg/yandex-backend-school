@@ -12,15 +12,12 @@ import java.util.List;
 public class SystemItemImport {
     public static SystemItemDB ToSystemItemDB(SystemItemImport item, String date){
         SystemItemDB model = new SystemItemDB();
-        TemporalAccessor ta = DateTimeFormatter.ISO_INSTANT.parse(date);
-        Instant i = Instant.from(ta);
-
         model.setId(item.getId());
-        model.setDate(Date.from(i));
+        model.setDate(date);
         model.setSize(item.getSize());
         model.setType(item.getType());
         model.setParentId(item.getParentId());
-        model.setUrl(model.getUrl());
+        model.setUrl(item.getUrl());
 
         return model;
     }
