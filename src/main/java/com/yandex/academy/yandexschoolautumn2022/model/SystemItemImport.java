@@ -9,7 +9,7 @@ public class SystemItemImport {
         model.setDate(date);
         model.setSize(item.getSize());
         model.setType(item.getType());
-        model.setParentid(item.getParentId());
+        model.setParentId(item.getParentId());
         model.setUrl(item.getUrl());
 
         return model;

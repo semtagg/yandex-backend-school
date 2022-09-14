@@ -2,23 +2,33 @@ package com.yandex.academy.yandexschoolautumn2022.entity;
 
 import com.yandex.academy.yandexschoolautumn2022.model.SystemItemType;
 import com.yandex.academy.yandexschoolautumn2022.model.SystemItemNodesResponse;
-import org.hibernate.envers.Audited;
 
 import javax.persistence.*;
 import java.util.ArrayList;
 
 @Entity
-@Audited
 public class SystemItemDb {
     public static SystemItemNodesResponse toSystemNodesResponse(SystemItemDb itemDB, ArrayList<SystemItemNodesResponse> children) {
         SystemItemNodesResponse result = new SystemItemNodesResponse();
-        result.setParentid(itemDB.getParentid());
+        result.setParentId(itemDB.getParentId());
         result.setSize(itemDB.getSize());
         result.setDate(itemDB.getDate());
         result.setId(itemDB.getId());
         result.setUrl(itemDB.getUrl());
         result.setType(itemDB.getType());
         result.setChildren(children);
+
+        return result;
+    }
+
+    public static SystemItemDbAud toSystemItemDbAud(SystemItemDb itemDB) {
+        SystemItemDbAud result = new SystemItemDbAud();
+        result.setParentId(itemDB.getParentId());
+        result.setSize(itemDB.getSize());
+        result.setDate(itemDB.getDate());
+        result.setId(itemDB.getId());
+        result.setUrl(itemDB.getUrl());
+        result.setType(itemDB.getType());
 
         return result;
     }
@@ -32,7 +42,7 @@ public class SystemItemDb {
     @Column(nullable = false)
     private String date;
 
-    private String parentid;
+    private String parentId;
 
     @Column(nullable = false)
     private SystemItemType type;
@@ -82,11 +92,11 @@ public class SystemItemDb {
         this.type = type;
     }
 
-    public String getParentid() {
-        return parentid;
+    public String getParentId() {
+        return parentId;
     }
 
-    public void setParentid(String parentId) {
-        this.parentid = parentId;
+    public void setParentId(String parentId) {
+        this.parentId = parentId;
     }
 }

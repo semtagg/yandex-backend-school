@@ -8,7 +8,6 @@ import org.springframework.data.envers.repository.support.EnversRevisionReposito
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 @SpringBootApplication
-@EnableJpaRepositories(repositoryFactoryBeanClass = EnversRevisionRepositoryFactoryBean.class)
 public class YandexSchoolAutumn2022Application {
 
 	public static void main(String[] args) {

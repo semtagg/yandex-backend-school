@@ -1,15 +1,16 @@
 package com.yandex.academy.yandexschoolautumn2022.service;
 
 import com.yandex.academy.yandexschoolautumn2022.entity.SystemItemDb;
+import com.yandex.academy.yandexschoolautumn2022.entity.SystemItemDbAud;
 import com.yandex.academy.yandexschoolautumn2022.model.*;
 import com.yandex.academy.yandexschoolautumn2022.model.Error;
+import com.yandex.academy.yandexschoolautumn2022.repository.CustomAudRepository;
 import com.yandex.academy.yandexschoolautumn2022.repository.CustomRepository;
 import com.yandex.academy.yandexschoolautumn2022.utils.Tuple2;
 import com.yandex.academy.yandexschoolautumn2022.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import javax.persistence.NonUniqueResultException;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAccessor;
@@ -20,6 +21,8 @@ import java.util.stream.Collectors;
 public class BaseService {
     @Autowired
     private CustomRepository repository;
+    @Autowired
+    private CustomAudRepository repositoryAud;
 
     private void update(String id, String date) {
         Optional<SystemItemDb> parent = repository.findById(id);
@@ -29,11 +32,15 @@ public class BaseService {
             Instant i = Instant.from(ta);
             Instant i1 = Instant.from(ta1);
 
-            if (Date.from(i).compareTo(Date.from(i1)) >= 0)
+            if (Date.from(i).compareTo(Date.from(i1)) > 0) {
                 parent.get().setDate(date);
 
-            if (parent.get().getParentid() != null) {
-                update(parent.get().getParentid(), date);
+                repositoryAud.save(SystemItemDb.toSystemItemDbAud(parent.get()));
+                repository.save(parent.get());
+            }
+
+            if (parent.get().getParentId() != null) {
+                update(parent.get().getParentId(), date);
             }
         }
     }
@@ -101,9 +108,12 @@ public class BaseService {
 
         for (SystemItemImport item : items) {
             SystemItemDb model = SystemItemImport.ToSystemItemDB(item, date);
+
             if (item.getParentId() != null) {
                 update(item.getParentId(), date);
             }
+
+            repositoryAud.save(SystemItemDb.toSystemItemDbAud(model));
             repository.save(model);
         }
 
@@ -112,14 +122,14 @@ public class BaseService {
     }
 
     private void deleteSubfolder(String id) {
-        ArrayList<SystemItemDb> items = repository.getAllByParentid(id);
+        ArrayList<SystemItemDb> items = repository.getAllByParentId(id);
 
         for (SystemItemDb item : items) {
             if (item.getType() == SystemItemType.FOLDER)
                 deleteSubfolder(item.getId());
 
             repository.delete(item);
-            repository.deleteFromAud(item.getId());
+            repositoryAud.deleteFromAud(item.getId());
         }
     }
 
@@ -144,7 +154,7 @@ public class BaseService {
         }
 
         repository.delete(item.get());
-        repository.deleteFromAud(item.get().getId());
+        repositoryAud.deleteFromAud(item.get().getId());
 
         result.setCode(200);
         return result;
@@ -152,7 +162,7 @@ public class BaseService {
 
     private Tuple2<Long, ArrayList<SystemItemNodesResponse>> getChildren(String id) {
         ArrayList<SystemItemNodesResponse> children = new ArrayList<>();
-        ArrayList<SystemItemDb> itemsDB = repository.getAllByParentid(id);
+        ArrayList<SystemItemDb> itemsDB = repository.getAllByParentId(id);
         Long size = 0L;
 
         for (SystemItemDb item : itemsDB) {
@@ -206,7 +216,11 @@ public class BaseService {
         }
 
         String dateBefore = Utils.removeOneDay(date);
-        ArrayList<SystemItemDb> items = repository.getAllFilesBetween(dateBefore, date);
+        ArrayList<SystemItemDbAud> itemsAud = repositoryAud.getAllFilesBetween(dateBefore, date);
+        ArrayList<SystemItemDb> items = new ArrayList<>();
+        for (SystemItemDbAud item : itemsAud) {
+            items.add(SystemItemDbAud.toSystemItemDb(item));
+        }
         SystemItemUpdatesResponse response = new SystemItemUpdatesResponse();
         response.setItems(items);
 
@@ -215,21 +229,25 @@ public class BaseService {
         return result;
     }
 
-/*    private Long getFolderSize(String id, String dateStart, String dateEnd) {
+    private Long getFolderSize(String id, String dateStart, String dateEnd) {
         Long size = 0L;
-        ArrayList<SystemItemDb> items = repository.getAllBetween(id, dateStart, dateEnd);
+        ArrayList<SystemItemDbAud> items = repositoryAud.getAllChildrenBetween(id, dateStart, dateEnd);
+        HashSet<String> used = new HashSet<>();
 
-        for (SystemItemDb item : items) {
-            if (item.getType() == SystemItemType.FOLDER){
-                size += getFolderSize(item.getId(), dateStart, item.getDate());
-            }
-            else {
-                size += item.getSize();
+        for (SystemItemDbAud item : items) {
+            if (!used.contains(item.getId())){
+                used.add(item.getId());
+
+                if (item.getType() == SystemItemType.FOLDER) {
+                    size += getFolderSize(item.getId(), dateStart, item.getDate());
+                } else {
+                    size += item.getSize();
+                }
             }
         }
 
         return size;
-    }*/
+    }
 
     public ErrorResponse<SystemItemUpdatesResponse> history(String id, String dateStart, String dateEnd) {
         ErrorResponse<SystemItemUpdatesResponse> result = new ErrorResponse<>();
@@ -240,23 +258,27 @@ public class BaseService {
             return result;
         }
 
-        ArrayList<SystemItemDb> items = repository.getAllBetween(id, dateStart, dateEnd);
+        ArrayList<SystemItemDbAud> itemsAud = repositoryAud.getAllBetween(id, dateStart, dateEnd);
 
-
-        /*if (items.isEmpty()) {
+        if (itemsAud.isEmpty()) {
             result.setCode(404);
             result.setMessage("Item not found");
             return result;
         }
 
-        for (SystemItemDb item : items) {
+        for (SystemItemDbAud item : itemsAud) {
             if (item.getType() == SystemItemType.FOLDER) {
                 item.setSize(getFolderSize(item.getId(), dateStart, item.getDate()));
             }
-        }*/
+        }
+
+        ArrayList<SystemItemDb> items = new ArrayList<>();
+        for (SystemItemDbAud aud : itemsAud) {
+            items.add(SystemItemDbAud.toSystemItemDb(aud));
+        }
 
         SystemItemUpdatesResponse response = new SystemItemUpdatesResponse();
-        //response.setItems(items);
+        response.setItems(items);
 
         result.setCode(200);
         result.setResponse(response);
