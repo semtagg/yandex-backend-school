@@ -74,7 +74,7 @@ public class BaseController {
             return new ResponseEntity<>((Error) result, HttpStatus.BAD_REQUEST);
         }
 
-        if (result.getCode() == 404){
+        if (result.getCode() == 404) {
             return new ResponseEntity<>((Error) result, HttpStatus.NOT_FOUND);
         }
 

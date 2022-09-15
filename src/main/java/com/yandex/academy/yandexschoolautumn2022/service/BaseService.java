@@ -15,7 +15,6 @@ import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAccessor;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 public class BaseService {
@@ -24,93 +23,20 @@ public class BaseService {
     @Autowired
     private CustomAudRepository repositoryAud;
 
-    private void update(String id, String date) {
-        Optional<SystemItemDb> parent = repository.findById(id);
-        if (parent.isPresent()) {
-            TemporalAccessor ta = DateTimeFormatter.ISO_INSTANT.parse(date);
-            TemporalAccessor ta1 = DateTimeFormatter.ISO_INSTANT.parse(parent.get().getDate());
-            Instant i = Instant.from(ta);
-            Instant i1 = Instant.from(ta1);
-
-            if (Date.from(i).compareTo(Date.from(i1)) > 0) {
-                parent.get().setDate(date);
-
-                repositoryAud.save(SystemItemDb.toSystemItemDbAud(parent.get()));
-                repository.save(parent.get());
-            }
-
-            if (parent.get().getParentId() != null) {
-                update(parent.get().getParentId(), date);
-            }
-        }
-    }
-
     public Error imports(List<SystemItemImport> items, String date) {
         Error result = new Error();
 
-        if (!Utils.isIsoDate(date)) {
+        if (!Utils.isIsoDate(date) || !Utils.validateInputData(items) || !validateParents(items)) {
             result.setCode(400);
             result.setMessage("Validation Failed");
             return result;
-        }
-
-        Set<String> hs = items.stream().map(SystemItemImport::getId).collect(Collectors.toSet());
-        if (hs.size() != items.size()) {
-            result.setCode(400);
-            result.setMessage("Validation Failed");
-            return result;
-        }
-
-        for (SystemItemImport item : items) {
-            if (item.getId() == null
-                    || (item.getType() == SystemItemType.FOLDER && item.getUrl() != null)
-                    || (item.getType() == SystemItemType.FILE && !(item.getUrl().length() <= 255))
-                    || (item.getType() == SystemItemType.FOLDER && item.getSize() != null)
-                    || (item.getType() == SystemItemType.FILE && (item.getSize() == null || item.getSize() <= 0))
-            ) {
-                result.setCode(400);
-                result.setMessage("Validation Failed");
-                return result;
-            }
-        }
-
-        for (SystemItemImport item : items) {
-            if (item.getType() == SystemItemType.FILE) {
-                Optional<SystemItemImport> parent = items
-                        .stream()
-                        .filter(i -> i.getId().equals(item.getParentId()))
-                        .findAny();
-
-                if (parent.isPresent() && parent.get().getType() == SystemItemType.FILE) {
-                    result.setCode(400);
-                    result.setMessage("Validation Failed");
-                    return result;
-                } else {
-                    Optional<SystemItemDb> parentDB = repository.findById(item.getParentId());
-
-                    if (parentDB.isPresent() && parentDB.get().getType() == SystemItemType.FILE) {
-                        result.setCode(400);
-                        result.setMessage("Validation Failed");
-                        return result;
-                    }
-                }
-            }
-
-            Optional<SystemItemDb> itemDB = repository.findById(item.getId());
-
-            if (itemDB.isPresent() && itemDB.get().getType() != item.getType()) {
-                result.setCode(400);
-                result.setMessage("Validation Failed");
-                return result;
-
-            }
         }
 
         for (SystemItemImport item : items) {
             SystemItemDb model = SystemItemImport.ToSystemItemDB(item, date);
 
             if (item.getParentId() != null) {
-                update(item.getParentId(), date);
+                updateImports(item.getParentId(), date);
             }
 
             repositoryAud.save(SystemItemDb.toSystemItemDbAud(model));
@@ -119,18 +45,6 @@ public class BaseService {
 
         result.setCode(200);
         return result;
-    }
-
-    private void deleteSubfolder(String id) {
-        ArrayList<SystemItemDb> items = repository.getAllByParentId(id);
-
-        for (SystemItemDb item : items) {
-            if (item.getType() == SystemItemType.FOLDER)
-                deleteSubfolder(item.getId());
-
-            repository.delete(item);
-            repositoryAud.deleteFromAud(item.getId());
-        }
     }
 
     public Error delete(String id, String date) {
@@ -160,29 +74,6 @@ public class BaseService {
         return result;
     }
 
-    private Tuple2<Long, ArrayList<SystemItemNodesResponse>> getChildren(String id) {
-        ArrayList<SystemItemNodesResponse> children = new ArrayList<>();
-        ArrayList<SystemItemDb> itemsDB = repository.getAllByParentId(id);
-        Long size = 0L;
-
-        for (SystemItemDb item : itemsDB) {
-            SystemItemNodesResponse response = SystemItemDb.toSystemNodesResponse(item, null);
-            if (item.getType() == SystemItemType.FOLDER) {
-                Tuple2<Long, ArrayList<SystemItemNodesResponse>> tuple = getChildren(item.getId());
-                size += tuple.getFirst();
-
-                response.setSize(tuple.getFirst());
-                response.setChildren(tuple.getSecond());
-            } else {
-                size += item.getSize();
-            }
-
-            children.add(response);
-        }
-
-        return new Tuple2<>(size, children);
-    }
-
     public ErrorResponse<SystemItemNodesResponse> nodes(String id) {
         ErrorResponse<SystemItemNodesResponse> result = new ErrorResponse<>();
 
@@ -205,7 +96,6 @@ public class BaseService {
         return result;
     }
 
-
     public ErrorResponse<SystemItemUpdatesResponse> updates(String date) {
         ErrorResponse<SystemItemUpdatesResponse> result = new ErrorResponse<>();
 
@@ -216,37 +106,14 @@ public class BaseService {
         }
 
         String dateBefore = Utils.removeOneDay(date);
-        ArrayList<SystemItemDbAud> itemsAud = repositoryAud.getAllFilesBetween(dateBefore, date);
-        ArrayList<SystemItemDb> items = new ArrayList<>();
-        for (SystemItemDbAud item : itemsAud) {
-            items.add(SystemItemDbAud.toSystemItemDb(item));
-        }
+
+        ArrayList<SystemItemDb> items = toSystemItemDbList(repositoryAud.getAllFilesBetween(dateBefore, date));
         SystemItemUpdatesResponse response = new SystemItemUpdatesResponse();
         response.setItems(items);
 
         result.setCode(200);
         result.setResponse(response);
         return result;
-    }
-
-    private Long getFolderSize(String id, String dateStart, String dateEnd) {
-        Long size = 0L;
-        ArrayList<SystemItemDbAud> items = repositoryAud.getAllChildrenBetween(id, dateStart, dateEnd);
-        HashSet<String> used = new HashSet<>();
-
-        for (SystemItemDbAud item : items) {
-            if (!used.contains(item.getId())){
-                used.add(item.getId());
-
-                if (item.getType() == SystemItemType.FOLDER) {
-                    size += getFolderSize(item.getId(), dateStart, item.getDate());
-                } else {
-                    size += item.getSize();
-                }
-            }
-        }
-
-        return size;
     }
 
     public ErrorResponse<SystemItemUpdatesResponse> history(String id, String dateStart, String dateEnd) {
@@ -272,10 +139,7 @@ public class BaseService {
             }
         }
 
-        ArrayList<SystemItemDb> items = new ArrayList<>();
-        for (SystemItemDbAud aud : itemsAud) {
-            items.add(SystemItemDbAud.toSystemItemDb(aud));
-        }
+        ArrayList<SystemItemDb> items = toSystemItemDbList(itemsAud);
 
         SystemItemUpdatesResponse response = new SystemItemUpdatesResponse();
         response.setItems(items);
@@ -283,5 +147,119 @@ public class BaseService {
         result.setCode(200);
         result.setResponse(response);
         return result;
+    }
+
+    private boolean validateParents(List<SystemItemImport> items) {
+        for (SystemItemImport item : items) {
+            if (item.getType() == SystemItemType.FILE) {
+                Optional<SystemItemImport> parent = items
+                        .stream()
+                        .filter(i -> i.getId().equals(item.getParentId()))
+                        .findAny();
+
+                if (parent.isPresent() && parent.get().getType() == SystemItemType.FILE) {
+                    return false;
+                } else {
+                    Optional<SystemItemDb> parentDB = repository.findById(item.getParentId());
+
+                    if (parentDB.isPresent() && parentDB.get().getType() == SystemItemType.FILE) {
+                        return false;
+                    }
+                }
+            }
+
+            Optional<SystemItemDb> itemDB = repository.findById(item.getId());
+
+            if (itemDB.isPresent() && itemDB.get().getType() != item.getType()) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private void updateImports(String id, String date) {
+        Optional<SystemItemDb> parent = repository.findById(id);
+        if (parent.isPresent()) {
+            TemporalAccessor ta = DateTimeFormatter.ISO_INSTANT.parse(date);
+            TemporalAccessor ta1 = DateTimeFormatter.ISO_INSTANT.parse(parent.get().getDate());
+            Instant i = Instant.from(ta);
+            Instant i1 = Instant.from(ta1);
+
+            if (Date.from(i).compareTo(Date.from(i1)) > 0) {
+                parent.get().setDate(date);
+
+                repositoryAud.save(SystemItemDb.toSystemItemDbAud(parent.get()));
+                repository.save(parent.get());
+            }
+
+            if (parent.get().getParentId() != null) {
+                updateImports(parent.get().getParentId(), date);
+            }
+        }
+    }
+
+    private void deleteSubfolder(String id) {
+        ArrayList<SystemItemDb> items = repository.getAllByParentId(id);
+
+        for (SystemItemDb item : items) {
+            if (item.getType() == SystemItemType.FOLDER)
+                deleteSubfolder(item.getId());
+
+            repository.delete(item);
+            repositoryAud.deleteFromAud(item.getId());
+        }
+    }
+
+    private Tuple2<Long, ArrayList<SystemItemNodesResponse>> getChildren(String id) {
+        ArrayList<SystemItemNodesResponse> children = new ArrayList<>();
+        ArrayList<SystemItemDb> itemsDB = repository.getAllByParentId(id);
+        Long size = 0L;
+
+        for (SystemItemDb item : itemsDB) {
+            SystemItemNodesResponse response = SystemItemDb.toSystemNodesResponse(item, null);
+            if (item.getType() == SystemItemType.FOLDER) {
+                Tuple2<Long, ArrayList<SystemItemNodesResponse>> tuple = getChildren(item.getId());
+                size += tuple.getFirst();
+
+                response.setSize(tuple.getFirst());
+                response.setChildren(tuple.getSecond());
+            } else {
+                size += item.getSize();
+            }
+
+            children.add(response);
+        }
+
+        return new Tuple2<>(size, children);
+    }
+
+    private Long getFolderSize(String id, String dateStart, String dateEnd) {
+        Long size = 0L;
+        ArrayList<SystemItemDbAud> items = repositoryAud.getAllChildrenBetween(id, dateStart, dateEnd);
+        HashSet<String> used = new HashSet<>();
+
+        for (SystemItemDbAud item : items) {
+            if (!used.contains(item.getId())) {
+                used.add(item.getId());
+
+                if (item.getType() == SystemItemType.FOLDER) {
+                    size += getFolderSize(item.getId(), dateStart, item.getDate());
+                } else {
+                    size += item.getSize();
+                }
+            }
+        }
+
+        return size;
+    }
+
+    private ArrayList<SystemItemDb> toSystemItemDbList(ArrayList<SystemItemDbAud> itemsAud) {
+        ArrayList<SystemItemDb> items = new ArrayList<>();
+        for (SystemItemDbAud item : itemsAud) {
+            items.add(SystemItemDbAud.toSystemItemDb(item));
+        }
+
+        return items;
     }
 }

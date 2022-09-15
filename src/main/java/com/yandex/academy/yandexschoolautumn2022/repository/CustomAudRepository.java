@@ -1,6 +1,5 @@
 package com.yandex.academy.yandexschoolautumn2022.repository;
 
-import com.yandex.academy.yandexschoolautumn2022.entity.SystemItemDb;
 import com.yandex.academy.yandexschoolautumn2022.entity.SystemItemDbAud;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
